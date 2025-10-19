@@ -6,6 +6,7 @@ import os
 
 app = Flask(__name__)
 
+# 用于解密 Excel 文件的密码（type1）
 PASSWORD = "m3@9B$#*52K&692v"
 
 @app.route('/')
@@ -29,6 +30,7 @@ def upload():
 
     try:
         if file_type == 'type1':
+            # 处理加密 Excel
             office_file = msoffcrypto.OfficeFile(file.stream)
             office_file.load_key(password=PASSWORD)
             decrypted = io.BytesIO()
@@ -73,33 +75,50 @@ def upload():
             """
 
         elif file_type == 'type2':
+            # 处理非加密 Excel，统计 AGS 和 USPS 大箱数量
             df = pd.read_excel(file.stream, skiprows=9)
-            df.iloc[:, 1] = df.iloc[:, 1].fillna(method='ffill')
+            df.iloc[:, 1] = df.iloc[:, 1].fillna(method='ffill')  # B列：大箱号向下填充
 
-            carton_col = df.columns[1]
-            tail_col = df.columns[18]
+            carton_col = df.columns[1]   # B列（大箱号）
+            tail_col = df.columns[18]    # S列（尾端）
 
-            df[tail_col] = df[tail_col].astype(str).str.strip().str.upper()
+            # 清洗尾端字段
+            df[tail_col] = df[tail_col].astype(str).str.upper().str.strip()
 
             ags_boxes = 0
             usps_boxes = 0
+            skipped_boxes = []
 
             for carton, group in df.groupby(carton_col):
                 unique_tails = set(group[tail_col].dropna().unique())
-                if len(unique_tails) == 1:
-                    tail = list(unique_tails)[0]
+
+                matched_tail = None
+                for tail in unique_tails:
                     if 'AGS' in tail:
-                        ags_boxes += 1
+                        matched_tail = 'AGS'
+                        break
                     elif 'USPS' in tail:
-                        usps_boxes += 1
+                        matched_tail = 'USPS'
+                        break
+
+                if matched_tail == 'AGS':
+                    ags_boxes += 1
+                elif matched_tail == 'USPS':
+                    usps_boxes += 1
                 else:
-                    print(f"⚠️ 大箱 {carton} 出现混合尾端：{unique_tails}（忽略）")
+                    skipped_boxes.append(carton)
 
             result_lines = []
             if ags_boxes > 0:
                 result_lines.append(f"BBC SPX-{ags_boxes}")
             if usps_boxes > 0:
                 result_lines.append(f"BBC USPS-{usps_boxes}")
+
+            if skipped_boxes:
+                result_lines.append("")
+                result_lines.append("⚠️ 以下大箱未识别尾端（请检查 S 列）：")
+                for box in skipped_boxes:
+                    result_lines.append(f"- {box}")
 
             return f"""
             <div style="text-align: center; font-family: monospace; white-space: pre-line;">
