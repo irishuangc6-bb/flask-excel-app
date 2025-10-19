@@ -6,7 +6,7 @@ import os
 
 app = Flask(__name__)
 
-# 解密密码
+# 用于解密 Excel 文件的密码（type1）
 PASSWORD = "m3@9B$#*52K&692v"
 
 @app.route('/')
@@ -75,7 +75,7 @@ def upload():
             """
 
         elif file_type == 'type2':
-            # 处理非加密 Excel，统计 AGS 和 USPS 大箱和小包裹数量
+            # 处理非加密 Excel，统计 AGS 和 USPS 大箱数量
             df = pd.read_excel(file.stream, skiprows=9)
             df.iloc[:, 1] = df.iloc[:, 1].fillna(method='ffill')  # B列：大箱号向下填充
 
@@ -87,8 +87,6 @@ def upload():
 
             ags_boxes = 0
             usps_boxes = 0
-            ags_pkgs = 0
-            usps_pkgs = 0
             skipped_boxes = []
 
             for carton, group in df.groupby(carton_col):
@@ -105,18 +103,16 @@ def upload():
 
                 if matched_tail == 'AGS':
                     ags_boxes += 1
-                    ags_pkgs += group.shape[0]
                 elif matched_tail == 'USPS':
                     usps_boxes += 1
-                    usps_pkgs += group.shape[0]
                 else:
                     skipped_boxes.append(carton)
 
             result_lines = []
             if ags_boxes > 0:
-                result_lines.append(f"BBC SPX-{ags_boxes}/{ags_pkgs}")
+                result_lines.append(f"BBC SPX-{ags_boxes}")
             if usps_boxes > 0:
-                result_lines.append(f"BBC USPS-{usps_boxes}/{usps_pkgs}")
+                result_lines.append(f"BBC USPS-{usps_boxes}")
 
             if skipped_boxes:
                 result_lines.append("")
