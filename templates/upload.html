@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>上传 Excel 文件</title>
+</head>
+<body>
+    <h2 style="text-align: center;">上传 Excel 文件</h2>
+    <form action="/upload" method="post" enctype="multipart/form-data" style="text-align: center;">
+        <label for="file">选择文件：</label>
+        <input type="file" name="file" required><br><br>
+
+        <label for="filetype">文件类型：</label>
+        <select name="filetype" required>
+            <option value="">--请选择--</option>
+            <option value="type1">加密文件（城市统计）</option>
+            <option value="type2">非加密文件（大箱尾端）</option>
+        </select><br><br>
+
+        <button type="submit">上传处理</button>
+    </form>
+</body>
+</html>
